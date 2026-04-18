@@ -1,0 +1,816 @@
+@{
+    ViewData["Title"] = "Facebook Page API Dashboard";
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Facebook Page API Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a2238;
+            --bg-input: #0f172a;
+            --border: #2a3a5c;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-blue-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-orange: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --accent-pink: #ec4899;
+            --facebook-blue: #1877f2;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            --radius: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: var(--facebook-blue);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 0 20px rgba(24, 119, 242, 0.4);
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 20px;
+            color: var(--accent-blue);
+            font-weight: 500;
+        }
+
+        /* Main Layout */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 24px;
+            min-height: calc(100vh - 82px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: border-color 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title::before {
+            content: '';
+            width: 3px;
+            height: 14px;
+            background: var(--accent-blue);
+            border-radius: 2px;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 40px;
+        }
+
+        /* API Buttons */
+        .api-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .api-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: left;
+        }
+
+        .api-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .api-btn:active {
+            transform: translateY(0);
+        }
+
+        .api-btn .method {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            min-width: 52px;
+            text-align: center;
+        }
+
+        .method-get {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .method-post {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .method-delete {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .api-btn .endpoint {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .api-btn.active {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        /* Response Panel */
+        .response-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .response-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .response-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-orange);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .response-time {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .copy-btn {
+            padding: 6px 14px;
+            background: rgba(139, 92, 246, 0.12);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 6px;
+            color: var(--accent-purple);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .copy-btn:hover {
+            background: rgba(139, 92, 246, 0.2);
+        }
+
+        .response-url {
+            padding: 10px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--accent-cyan);
+            word-break: break-all;
+        }
+
+        .response-body {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .response-body-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .response-body-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .response-content {
+            flex: 1;
+            padding: 16px 20px;
+            overflow: auto;
+            max-height: calc(100vh - 320px);
+        }
+
+        .json-display {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text-primary);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .empty-state-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(59, 130, 246, 0.2);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .loading .spinner {
+            display: inline-block;
+        }
+
+        @@keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* JSON Syntax Highlighting */
+        .json-key { color: #7dd3fc; }
+        .json-string { color: #86efac; }
+        .json-number { color: #fbbf24; }
+        .json-boolean { color: #c084fc; }
+        .json-null { color: #94a3b8; }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success {
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            border: 1px solid rgba(16, 185, 129, 0.5);
+        }
+
+        .toast-error {
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+
+        /* Responsive */
+        @@media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+
+            .response-content {
+                max-height: 500px;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Token visibility toggle */
+        .token-wrapper {
+            position: relative;
+        }
+
+        .token-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+        }
+
+        .token-toggle:hover {
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">f</div>
+                <span class="logo-text">Facebook Page API</span>
+                <span class="logo-badge">v25.0</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="spinner" id="globalSpinner"></div>
+                <span class="response-time" id="requestTime"></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Config Card -->
+            <div class="card">
+                <div class="card-title">⚙️ Cấu hình (Đã cố định)</div>
+                <div class="form-group">
+                    <label class="form-label">Page ID</label>
+                    <div class="form-input" style="opacity: 0.7; cursor: default; user-select: all;">1046712038534955</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Access Token</label>
+                    <div class="form-input" style="opacity: 0.7; cursor: default; font-size: 11px; word-break: break-all; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="EAAN7fFMrB7EBRPPG2asHdx...CB8">✅ Đã cố định trong hệ thống</div>
+                </div>
+                <div class="form-group" id="postIdGroup" style="display:none;">
+                    <label class="form-label">Post ID</label>
+                    <input type="text" class="form-input" id="postId"
+                           placeholder="Nhập Post ID (vd: 1046712038534955_postId)..." />
+                </div>
+                <div class="form-group" id="messageGroup" style="display:none;">
+                    <label class="form-label">Nội dung bài viết</label>
+                    <textarea class="form-input" id="postMessage" rows="3"
+                              placeholder="Nhập nội dung bài viết..."></textarea>
+                </div>
+            </div>
+
+            <!-- API Endpoints Card -->
+            <div class="card">
+                <div class="card-title">🔗 API Endpoints</div>
+                <div class="api-buttons">
+                    <button class="api-btn" onclick="callApi('getPage')" data-needs="">
+                        <span class="method method-get">GET</span>
+                        <span class="endpoint">/api/page/info</span>
+                    </button>
+                    <button class="api-btn" onclick="callApi('getPosts')" data-needs="">
+                        <span class="method method-get">GET</span>
+                        <span class="endpoint">/api/page/posts</span>
+                    </button>
+                    <button class="api-btn" onclick="callApi('createPost')" data-needs="message">
+                        <span class="method method-post">POST</span>
+                        <span class="endpoint">/api/page/posts</span>
+                    </button>
+                    <button class="api-btn" onclick="callApi('deletePost')" data-needs="post">
+                        <span class="method method-delete">DEL</span>
+                        <span class="endpoint">/api/page/post/{postId}</span>
+                    </button>
+                    <button class="api-btn" onclick="callApi('getComments')" data-needs="post">
+                        <span class="method method-get">GET</span>
+                        <span class="endpoint">/api/page/post/{postId}/comments</span>
+                    </button>
+                    <button class="api-btn" onclick="callApi('getLikes')" data-needs="post">
+                        <span class="method method-get">GET</span>
+                        <span class="endpoint">/api/page/post/{postId}/likes</span>
+                    </button>
+                    <button class="api-btn" onclick="callApi('getInsights')" data-needs="">
+                        <span class="method method-get">GET</span>
+                        <span class="endpoint">/api/page/insights</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Info Card -->
+            <div class="card">
+                <div class="card-title">📋 Hướng dẫn</div>
+                <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.8;">
+                    <p>✅ Page ID và Access Token đã được <strong>cố định sẵn</strong></p>
+                    <p>1. Bấm vào endpoint để gọi API</p>
+                    <p>2. Một số API cần nhập <strong>Post ID</strong></p>
+                    <p style="margin-top: 8px; color: var(--accent-orange);">
+                        ⚠️ Post ID có dạng: <code style="background: var(--bg-input); padding: 2px 6px; border-radius: 4px;">pageId_postId</code>
+                    </p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Response Panel -->
+        <div class="response-panel">
+            <!-- Response URL -->
+            <div class="response-url" id="requestUrl" style="display:none;"></div>
+
+            <!-- Response Status -->
+            <div class="response-header" id="responseHeader" style="display:none;">
+                <div class="response-info">
+                    <span class="status-badge" id="statusBadge"></span>
+                    <span class="response-time" id="responseTime"></span>
+                </div>
+                <button class="copy-btn" onclick="copyResponse()">📋 Copy JSON</button>
+            </div>
+
+            <!-- Response Body -->
+            <div class="response-body">
+                <div class="response-body-header">
+                    <span class="response-body-title">Response Body</span>
+                    <span class="response-body-title" id="responseSize"></span>
+                </div>
+                <div class="response-content">
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-state-icon">📡</div>
+                        <p class="empty-state-text">Chưa có response</p>
+                        <p class="empty-state-hint">Chọn một endpoint bên trái để bắt đầu</p>
+                    </div>
+                    <pre class="json-display" id="jsonDisplay" style="display:none;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let lastResponse = '';
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function showFields(needs) {
+            document.getElementById('postIdGroup').style.display = 'none';
+            document.getElementById('messageGroup').style.display = 'none';
+
+            if (needs.includes('post')) {
+                document.getElementById('postIdGroup').style.display = 'block';
+            }
+            if (needs.includes('message')) {
+                document.getElementById('messageGroup').style.display = 'block';
+            }
+        }
+
+        // Highlight active button and show relevant fields
+        document.querySelectorAll('.api-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.api-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const needs = this.dataset.needs || '';
+                showFields(needs.split(','));
+            });
+        });
+
+        function syntaxHighlight(json) {
+            if (typeof json !== 'string') {
+                json = JSON.stringify(json, null, 2);
+            }
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(
+                /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+                function (match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                }
+            );
+        }
+
+        async function callApi(action) {
+            const postId = document.getElementById('postId') ? document.getElementById('postId').value.trim() : '';
+            const message = document.getElementById('postMessage') ? document.getElementById('postMessage').value.trim() : '';
+
+            let url = '';
+            let method = 'GET';
+            let body = null;
+
+            switch (action) {
+                case 'getPage':
+                    url = '/api/page/info';
+                    break;
+                case 'getPosts':
+                    url = '/api/page/posts';
+                    break;
+                case 'createPost':
+                    if (!message) { showToast('Vui lòng nhập nội dung bài viết!', 'error'); return; }
+                    url = '/api/page/posts';
+                    method = 'POST';
+                    body = JSON.stringify({ message: message });
+                    break;
+                case 'deletePost':
+                    if (!postId) { showToast('Vui lòng nhập Post ID!', 'error'); return; }
+                    url = `/api/page/post/${postId}`;
+                    method = 'DELETE';
+                    break;
+                case 'getComments':
+                    if (!postId) { showToast('Vui lòng nhập Post ID!', 'error'); return; }
+                    url = `/api/page/post/${postId}/comments`;
+                    break;
+                case 'getLikes':
+                    if (!postId) { showToast('Vui lòng nhập Post ID!', 'error'); return; }
+                    url = `/api/page/post/${postId}/likes`;
+                    break;
+                case 'getInsights':
+                    url = '/api/page/insights';
+                    break;
+            }
+
+            // Show loading
+            document.getElementById('globalSpinner').style.display = 'inline-block';
+            document.getElementById('requestUrl').style.display = 'block';
+            document.getElementById('requestUrl').textContent = `${method} ${window.location.origin}${url}`;
+
+            const startTime = performance.now();
+
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                if (body) options.body = body;
+
+                const response = await fetch(url, options);
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                const data = await response.json();
+
+                lastResponse = JSON.stringify(data, null, 2);
+
+                // Update UI
+                document.getElementById('responseHeader').style.display = 'flex';
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('jsonDisplay').style.display = 'block';
+
+                const statusBadge = document.getElementById('statusBadge');
+                statusBadge.textContent = `${response.status} ${response.statusText}`;
+                statusBadge.className = `status-badge ${response.ok ? 'status-success' : 'status-error'}`;
+
+                document.getElementById('responseTime').textContent = `${duration}ms`;
+                document.getElementById('responseSize').textContent = `${lastResponse.length} bytes`;
+
+                document.getElementById('jsonDisplay').innerHTML = syntaxHighlight(data);
+
+                if (response.ok) {
+                    showToast(`✅ ${method} thành công! (${duration}ms)`);
+                } else {
+                    showToast(`❌ Lỗi: ${data.error || response.statusText}`, 'error');
+                }
+            } catch (err) {
+                showToast(`❌ Lỗi kết nối: ${err.message}`, 'error');
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('jsonDisplay').style.display = 'block';
+                document.getElementById('jsonDisplay').textContent = `Error: ${err.message}`;
+            } finally {
+                document.getElementById('globalSpinner').style.display = 'none';
+            }
+        }
+
+        function copyResponse() {
+            if (lastResponse) {
+                navigator.clipboard.writeText(lastResponse).then(() => {
+                    showToast('📋 Đã copy JSON vào clipboard!');
+                });
+            }
+        }
+
+        // Enter key support
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    const activeBtn = document.querySelector('.api-btn.active');
+                    if (activeBtn) activeBtn.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
