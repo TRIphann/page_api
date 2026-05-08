@@ -516,6 +516,118 @@
         .token-toggle:hover {
             color: var(--text-secondary);
         }
+        /* Webhook Live Panel */
+        .webhook-panel {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            min-height: calc(100vh - 80px);
+            padding-bottom: 24px;
+        }
+        .webhook-panel.active { display: flex; }
+        .webhook-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+        .webhook-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--accent-pink);
+            border-radius: 50%;
+            animation: pulse-dot 1.5s infinite;
+        }
+        @@keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(236,72,153,0.6); }
+            50% { box-shadow: 0 0 0 8px rgba(236,72,153,0); }
+        }
+        .live-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-pink);
+        }
+        .event-count {
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            background: var(--bg-input);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+        .webhook-events {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-right: 4px;
+        }
+        .comment-card {
+            padding: 14px 18px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+        }
+        .comment-card.new-event {
+            animation: popIn 0.4s ease, glowFade 5s ease forwards;
+        }
+        @@keyframes popIn {
+            0% { opacity: 0; transform: scale(0.85) translateY(-15px); }
+            60% { transform: scale(1.02) translateY(0); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @@keyframes glowFade {
+            0% { border-color: var(--accent-pink); box-shadow: 0 0 20px rgba(236,72,153,0.35); }
+            70% { border-color: var(--accent-pink); box-shadow: 0 0 12px rgba(236,72,153,0.2); }
+            100% { border-color: var(--border); box-shadow: none; }
+        }
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .comment-from {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--accent-blue);
+        }
+        .comment-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .comment-message {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+        .comment-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .comment-meta span {
+            padding: 2px 8px;
+            background: var(--bg-input);
+            border-radius: 4px;
+        }
+        .kafka-badge {
+            background: rgba(16,185,129,0.12) !important;
+            color: var(--accent-green) !important;
+            border: 1px solid rgba(16,185,129,0.2);
+        }
     </style>
 </head>
 <body>
@@ -593,6 +705,11 @@
                         <span class="method method-get">GET</span>
                         <span class="endpoint">/api/page/insights</span>
                     </button>
+                    <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
+                    <button class="api-btn" id="webhookBtn" onclick="openWebhookTab()" data-needs="">
+                        <span class="method" style="background: rgba(236,72,153,0.15); color: var(--accent-pink); border: 1px solid rgba(236,72,153,0.3);">LIVE</span>
+                        <span class="endpoint" style="color: var(--accent-pink);">/webhook realtime</span>
+                    </button>
                 </div>
             </div>
 
@@ -638,6 +755,24 @@
                     </div>
                     <pre class="json-display" id="jsonDisplay" style="display:none;"></pre>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Webhook Live Panel (hidden by default, shown when clicking LIVE button) -->
+    <div class="webhook-panel" id="webhookPanel" style="max-width: 1400px; margin: 0 auto; padding: 0 24px 24px;">
+        <div class="webhook-header">
+            <div class="webhook-header-left">
+                <div class="live-dot"></div>
+                <span class="live-label">LIVE COMMENTS</span>
+            </div>
+            <span class="event-count" id="eventCount">0 comments</span>
+        </div>
+        <div class="webhook-events" id="webhookEvents">
+            <div class="empty-state" id="webhookEmpty">
+                <div class="empty-state-icon">📡</div>
+                <p class="empty-state-text">Loading comments...</p>
+                <p class="empty-state-hint">Comment on any post on Facebook, it will appear here in real-time</p>
             </div>
         </div>
     </div>
@@ -811,6 +946,230 @@
                 }
             });
         });
+
+        // ========== WEBHOOK LIVE PANEL ==========
+        var webhookActive = false;
+        var sseSource = null;
+        var allComments = [];
+        var knownIds = {};
+        var firstLoadDone = false;
+
+        function openWebhookTab() {
+            webhookActive = !webhookActive;
+            var panel = document.getElementById('webhookPanel');
+            var mainContainer = document.querySelector('.main-container');
+            var btn = document.getElementById('webhookBtn');
+
+            if (webhookActive) {
+                btn.classList.add('active');
+                mainContainer.style.display = 'none';
+                panel.style.display = 'flex';
+                firstLoadDone = false;
+                loadInitialComments();
+            } else {
+                btn.classList.remove('active');
+                mainContainer.style.display = 'grid';
+                panel.style.display = 'none';
+                disconnectSSE();
+            }
+        }
+
+        function loadInitialComments() {
+            fetch('/webhook/all-comments')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var comments = data.comments || [];
+                    allComments = [];
+                    for (var i = 0; i < comments.length; i++) {
+                        knownIds[comments[i].id] = true;
+                        allComments.push({
+                            id: comments[i].id,
+                            from: comments[i].from_name || 'Unknown',
+                            message: comments[i].message || '',
+                            time: comments[i].created_time || '',
+                            postId: comments[i].post_id || '',
+                            source: 'facebook',
+                            isNew: false
+                        });
+                    }
+                    renderAllComments();
+                    // Only connect SSE AFTER first load is fully done
+                    firstLoadDone = true;
+                    connectSSE();
+                })
+                .catch(function(e) { console.error('Load error:', e); });
+        }
+
+        function connectSSE() {
+            if (sseSource) sseSource.close();
+            sseSource = new EventSource('/webhook/stream');
+
+            sseSource.onmessage = function(e) {
+                if (!firstLoadDone) return;
+
+                var evt;
+                try { evt = JSON.parse(e.data); } catch(err) { return; }
+
+                // NormalizedEvent from Kafka: object_id, event_type, content, sender
+                var eid = evt.object_id || '';
+                if (!eid || knownIds[eid]) return;
+                knownIds[eid] = true;
+
+                // Only process comment events
+                if (evt.event_type !== 'comment') return;
+
+                // Try to build comment from SSE data directly
+                var senderName = 'Unknown';
+                if (evt.sender && evt.sender.name) senderName = evt.sender.name;
+
+                var newComment = {
+                    id: eid,
+                    from: senderName,
+                    message: evt.content || '',
+                    time: evt.received_at || new Date().toISOString(),
+                    postId: evt.post_id || '',
+                    source: 'kafka',
+                    isNew: true
+                };
+
+                // If content is empty (rare), fetch from API instead
+                if (!newComment.message) {
+                    fetchAndInsertNew();
+                    return;
+                }
+
+                // Insert into UI immediately - zero flicker
+                allComments.unshift(newComment);
+                insertCommentCard(newComment);
+                showToast('Kafka → "' + (newComment.message || '').substring(0, 40) + '"');
+
+                var countEl = document.getElementById('eventCount');
+                if (countEl) countEl.textContent = allComments.length + ' comments';
+            };
+
+            sseSource.onerror = function() {};
+        }
+
+        // Fallback: fetch new comments from API (only when SSE data incomplete)
+        function fetchAndInsertNew() {
+            fetch('/webhook/all-comments')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var comments = data.comments || [];
+                    for (var i = 0; i < comments.length; i++) {
+                        if (!knownIds[comments[i].id]) {
+                            knownIds[comments[i].id] = true;
+                            var c = {
+                                id: comments[i].id,
+                                from: comments[i].from_name || 'Unknown',
+                                message: comments[i].message || '',
+                                time: comments[i].created_time || '',
+                                postId: comments[i].post_id || '',
+                                source: 'kafka',
+                                isNew: true
+                            };
+                            allComments.unshift(c);
+                            insertCommentCard(c);
+                            showToast('New: "' + (c.message || '').substring(0, 40) + '"');
+                        }
+                    }
+                    var countEl = document.getElementById('eventCount');
+                    if (countEl) countEl.textContent = allComments.length + ' comments';
+                })
+                .catch(function(e) { console.error('Fetch error:', e); });
+        }
+
+        function disconnectSSE() {
+            if (sseSource) { sseSource.close(); sseSource = null; }
+        }
+
+        // Fix Facebook date format: "+0000" → "+00:00" 
+        function fixDate(t) {
+            if (!t) return '';
+            // Facebook returns "2026-04-25T09:04:52+0000" but JS needs "+00:00"
+            return t.replace(/([+-])(\d{2})(\d{2})$/, '$1$2:$3');
+        }
+
+        function safeTime(t) {
+            if (!t) return 0;
+            var ms = new Date(fixDate(t)).getTime();
+            return isNaN(ms) ? 0 : ms;
+        }
+
+        function formatTime(t) {
+            if (!t) return '';
+            var d = new Date(fixDate(t));
+            if (isNaN(d.getTime())) return '';
+            return d.toLocaleString('vi-VN');
+        }
+
+        function buildCardHtml(c) {
+            var timeStr = formatTime(c.time);
+            var sourceTag = c.isNew
+                ? '<span class="kafka-badge">Kafka Realtime</span>'
+                : '<span>Facebook</span>';
+            var postInfo = c.postId ? '<span>Post: ' + c.postId.split('_').pop() + '</span>' : '';
+
+            return '<div class="comment-header">' +
+                '<span class="comment-from">' + escapeHtml(c.from) + '</span>' +
+                '<span class="comment-time">' + timeStr + '</span>' +
+                '</div>' +
+                '<div class="comment-message">' + escapeHtml(c.message) + '</div>' +
+                '<div class="comment-meta">' + sourceTag + postInfo + '</div>';
+        }
+
+        // Full render - only used on first load
+        function renderAllComments() {
+            var container = document.getElementById('webhookEvents');
+            var countEl = document.getElementById('eventCount');
+            if (!container || !countEl) return;
+
+            countEl.textContent = allComments.length + ' comments';
+
+            if (allComments.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📡</div><p class="empty-state-text">No comments yet</p><p class="empty-state-hint">Comment on any post on Facebook, it will appear here</p></div>';
+                return;
+            }
+
+            // Sort newest first
+            allComments.sort(function(a, b) {
+                return safeTime(b.time) - safeTime(a.time);
+            });
+
+            var html = '';
+            for (var i = 0; i < allComments.length; i++) {
+                html += '<div class="comment-card">' + buildCardHtml(allComments[i]) + '</div>';
+            }
+            container.innerHTML = html;
+        }
+
+        // Insert a single new card at top - NO flicker, existing cards untouched
+        function insertCommentCard(c) {
+            var container = document.getElementById('webhookEvents');
+            if (!container) return;
+
+            // Remove empty state if present
+            var empty = container.querySelector('.empty-state');
+            if (empty) empty.remove();
+
+            var card = document.createElement('div');
+            card.className = 'comment-card new-event';
+            card.innerHTML = buildCardHtml(c);
+
+            // Insert at the very top
+            if (container.firstChild) {
+                container.insertBefore(card, container.firstChild);
+            } else {
+                container.appendChild(card);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            var div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
     </script>
 </body>
 </html>

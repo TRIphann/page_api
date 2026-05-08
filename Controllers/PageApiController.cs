@@ -10,17 +10,18 @@ namespace facbook_page_api.Controllers
     {
         private readonly IFacebookGraphService _facebookService;
         private readonly ILogger<PageApiController> _logger;
-
-        // ===== CỐ ĐỊNH Page ID và Access Token =====
-        private const string PAGE_ID = "1046712038534955";
-        private const string ACCESS_TOKEN = "EAAN7fFMrB7EBRGp6Lczfy3bBxf2VlfLyK7wcrrUKb8sI3DNythNXaL2ihrNne9BfdtbOa3yqwE9Uy8hpjgCh6Axqx9nAGLEmR3fkCH5mT5QNW9G2L1Qoz0jKllY7zOVq61afAB5ctDXB4AEbCzuTnxNQU2zFRZAuBGkhD4eN4tpxlpBceN3aPC9GpR35bCvpct46xTDvwym25XC2HisaUmFSyqOmBfIuTpQgZD";
+        private readonly string PAGE_ID;
+        private readonly string ACCESS_TOKEN;
 
         public PageApiController(
             IFacebookGraphService facebookService,
+            IConfiguration configuration,
             ILogger<PageApiController> logger)
         {
             _facebookService = facebookService;
             _logger = logger;
+            PAGE_ID = configuration["Facebook:PageId"] ?? "1046712038534955";
+            ACCESS_TOKEN = configuration["Facebook:PageAccessToken"] ?? "";
         }
 
         /// <summary>

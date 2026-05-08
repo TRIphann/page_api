@@ -4,3 +4,5 @@ obj/
 *.suo
 .vs/
 *.swp
+appsettings.*.json
+!appsettings.json

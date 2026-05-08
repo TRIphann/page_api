@@ -1,134 +1,261 @@
-# 📘 Facebook Page API - ASP.NET Core MVC
+# Facebook Page API - ASP.NET Core MVC
 
-Ứng dụng quản lý Facebook Page thông qua Graph API v25.0, được xây dựng bằng ASP.NET Core MVC với giao diện Dashboard hiện đại.
+A Facebook Page management application with real-time webhook event processing, built with ASP.NET Core MVC and integrated with Apache Kafka.
 
 ![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=flat&logo=dotnet)
 ![Facebook](https://img.shields.io/badge/Facebook_Graph_API-v25.0-1877F2?style=flat&logo=facebook)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat)
+![Kafka](https://img.shields.io/badge/Apache_Kafka-Docker-231F20?style=flat&logo=apachekafka)
 
-## 🚀 Tính năng
+## Features
 
-| Chức năng | Endpoint | Method |
-|---|---|---|
-| Xem thông tin trang | `/api/page/info` | GET |
-| Lấy danh sách bài viết | `/api/page/posts` | GET |
-| Đăng bài viết mới | `/api/page/posts` | POST |
-| Xóa bài viết | `/api/page/post/{postId}` | DELETE |
-| Xem comments bài viết | `/api/page/post/{postId}/comments` | GET |
-| Xem likes bài viết | `/api/page/post/{postId}/likes` | GET |
-| Thống kê trang | `/api/page/insights` | GET |
+### Facebook Graph API Endpoints
 
-## 📋 Yêu cầu
+| Feature | Endpoint | Method |
+|---------|----------|--------|
+| Get page info | `/api/page/info` | GET |
+| List posts | `/api/page/posts` | GET |
+| Create a post | `/api/page/posts` | POST |
+| Delete a post | `/api/page/post/{postId}` | DELETE |
+| Get post comments | `/api/page/post/{postId}/comments` | GET |
+| Get post likes | `/api/page/post/{postId}/likes` | GET |
+| Page insights | `/api/page/insights` | GET |
+
+### Real-time Webhook (Event-Driven Architecture)
+
+| Feature | Endpoint | Method |
+|---------|----------|--------|
+| Facebook webhook verification | `/webhook` | GET |
+| Receive real-time events | `/webhook` | POST |
+| Webhook health check | `/webhook/health` | GET |
+
+When a new comment is posted on the Facebook Page, the webhook endpoint receives the event in real-time, normalizes it into a standard schema, and publishes it to the Kafka topic `raw_events`.
+
+## Prerequisites
 
 - [.NET SDK 9.0+](https://dotnet.microsoft.com/download)
 - [Facebook Developer Account](https://developers.facebook.com/)
-- Facebook Page với quyền quản trị
+- Facebook Page with admin access
+- Docker with Apache Kafka container running on port 9092
+- Kafka topic `raw_events` created
 
-## ⚙️ Cài đặt & Cấu hình
+## Setup and Configuration
 
-### 1. Clone repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/TRIphann/page_api.git
 cd page_api
 ```
 
-### 2. Lấy Facebook Page Access Token
+### 2. Get a Facebook Page Access Token
 
-1. Truy cập [Graph API Explorer](https://developers.facebook.com/tools/explorer/)
-2. Chọn App trong dropdown **"Ứng dụng trên Meta"**
-3. Cấp quyền (Permissions):
+1. Go to [Graph API Explorer](https://developers.facebook.com/tools/explorer/)
+2. Select your App from the dropdown
+3. Grant the following permissions:
    - `read_insights`
    - `pages_show_list`
    - `pages_read_engagement`
    - `pages_manage_metadata`
    - `pages_read_user_content`
    - `pages_manage_posts`
-4. **Quan trọng:** Chọn dropdown **"Người dùng hoặc Trang"** → chọn **tên Page** (KHÔNG chọn "Mã người dùng")
-5. Copy Access Token
+4. **Important:** In the "User or Page" dropdown, select the **Page name** (not "User Token")
+5. Copy the Access Token
 
-### 3. Cập nhật thông tin
+### 3. Update configuration
 
-Mở file `Controllers/PageApiController.cs` và thay đổi:
+Edit `appsettings.json`:
 
-```csharp
-private const string PAGE_ID = "YOUR_PAGE_ID";
-private const string ACCESS_TOKEN = "YOUR_PAGE_ACCESS_TOKEN";
+```json
+{
+  "Facebook": {
+    "AppId": "YOUR_APP_ID",
+    "AppSecret": "YOUR_APP_SECRET",
+    "VerifyToken": "my_verify_token",
+    "PageId": "YOUR_PAGE_ID",
+    "PageAccessToken": "YOUR_PAGE_ACCESS_TOKEN"
+  },
+  "Kafka": {
+    "BootstrapServers": "localhost:9092",
+    "Topic": "raw_events"
+  }
+}
 ```
 
-### 4. Chạy ứng dụng
+- `AppSecret`: Required for webhook signature validation (leave empty to skip in development)
+- `VerifyToken`: Token used during Facebook webhook subscription verification
+
+### 4. Restore dependencies and run
 
 ```bash
+dotnet restore
 dotnet run
 ```
 
-Truy cập: **http://localhost:5051**
+The application will start at: **http://localhost:5051**
 
-## 🏗️ Kiến trúc dự án
+## Project Architecture
 
 ```
 facbook_page_api/
 ├── Controllers/
-│   ├── HomeController.cs          # Điều hướng trang chủ
-│   └── PageApiController.cs       # REST API endpoints
+│   ├── HomeController.cs              # Home page routing
+│   ├── PageApiController.cs           # Facebook Graph API endpoints
+│   └── WebhookController.cs           # Webhook receiver (GET verify + POST events)
 ├── Models/
-│   └── FacebookModels.cs          # Data models (Page, Post, Comment,...)
+│   ├── FacebookModels.cs              # Data models (Page, Post, Comment, ...)
+│   └── WebhookModels.cs               # Webhook payload + NormalizedEvent schema
 ├── Services/
-│   ├── IFacebookGraphService.cs   # Interface service
-│   └── FacebookGraphService.cs    # Gọi Facebook Graph API
+│   ├── IFacebookGraphService.cs       # Graph API service interface
+│   ├── FacebookGraphService.cs        # Facebook Graph API client
+│   ├── KafkaProducerService.cs        # Kafka producer (publish to raw_events)
+│   ├── EventNormalizerService.cs      # Normalize webhook payloads to standard schema
+│   └── SignatureValidator.cs          # HMAC-SHA256 signature validation
 ├── Views/
 │   └── Home/
-│       └── Index.cshtml           # Dashboard UI
-├── Program.cs                     # Cấu hình ứng dụng
-└── appsettings.json               # Cấu hình chung
+│       └── Index.cshtml               # Dashboard UI
+├── Program.cs                         # App configuration and DI registration
+└── appsettings.json                   # Application settings
 ```
 
-### Luồng hoạt động
+### Request Flow - Graph API
 
 ```
-Browser → Controller → FacebookGraphService → Facebook Graph API v25.0
-                ↓
-          Response JSON → Dashboard hiển thị kết quả
+Browser --> PageApiController --> FacebookGraphService --> Facebook Graph API v25.0
+                  |
+                  v
+            JSON Response --> Dashboard displays results
 ```
 
-## 📖 Hướng dẫn sử dụng
+### Request Flow - Real-time Webhook
 
-### Lấy thông tin trang
-Bấm **GET /api/page/info** → Hiển thị tên, category, số fan, ảnh đại diện.
+```
+Facebook (new comment on Page)
+       |
+       v  HTTP POST
+  WebhookController (/webhook)
+       |
+       v
+  SignatureValidator         --> Verify X-Hub-Signature-256 (HMAC-SHA256)
+       |
+       v
+  EventNormalizerService     --> Convert Comment/Message to NormalizedEvent
+       |
+       v
+  KafkaProducerService       --> Publish to Kafka topic "raw_events"
+       |
+       v
+  Apache Kafka (Docker, port 9092)
+```
 
-### Lấy bài viết
-Bấm **GET /api/page/posts** → Danh sách bài viết với `id`, `message`, `created_time`.
+## Normalized Event Schema
 
-### Đăng bài mới
-1. Bấm **POST /api/page/posts**
-2. Nhập nội dung bài viết vào ô "Nội dung bài viết"
-3. Bấm lại nút POST → Bài viết được đăng lên Facebook Page
+All Facebook events (comments, messages, reactions) are normalized into this unified schema before publishing to Kafka:
 
-### Xóa bài viết
-1. Copy Post ID từ kết quả GET posts (dạng: `pageId_postId`)
-2. Dán vào ô **Post ID**
-3. Bấm **DEL /api/page/post/{postId}**
+```json
+{
+  "event_id": "dcc77bca-28a0-4989-ad0b-dbfdd6f109b9",
+  "event_type": "comment",
+  "verb": "add",
+  "page_id": "1046712038534955",
+  "object_id": "1046712038534955_888",
+  "post_id": "1046712038534955_999",
+  "parent_id": null,
+  "content": "Hello! This is a new comment!",
+  "sender": {
+    "id": "123456789",
+    "name": "Nguyen Van A"
+  },
+  "timestamp": 1714012800,
+  "received_at": "2026-04-25T08:19:20Z",
+  "metadata": {
+    "source": "feed",
+    "field": "feed"
+  }
+}
+```
 
-### Xem comments / likes
-1. Nhập Post ID
-2. Bấm **GET .../comments** hoặc **GET .../likes**
+## Facebook Webhook Registration
 
-## ⚠️ Lưu ý
+To receive real-time events from Facebook:
 
-- **Access Token** hết hạn sau ~1-2 giờ → cần lấy lại từ Graph API Explorer
-- **Page Token ≠ User Token**: Phải chọn tên Page trong dropdown, không chọn "Mã người dùng"
-- **Post ID** có dạng `pageId_postId` (vd: `1046712038534955_122093172452504915`)
-- Dùng endpoint `/posts` thay vì `/feed` cho Trải nghiệm Trang mới (New Pages Experience)
-- Nhiều metrics insights cũ đã bị deprecated trong API v25.0
+1. Go to [Facebook Developers](https://developers.facebook.com) and select your App
+2. Navigate to **Webhooks** and select **Page**
+3. Configure:
+   - **Callback URL**: `https://<your-domain>/webhook` (use [ngrok](https://ngrok.com/) for local testing: `ngrok http 5051`)
+   - **Verify Token**: `my_verify_token` (must match `Facebook:VerifyToken` in `appsettings.json`)
+   - **Subscriptions**: Select `feed` for comments and `messages` for direct messages
+4. Facebook sends a GET request to verify the endpoint, and upon success the subscription is active
 
-## 🛠️ Công nghệ sử dụng
+## Usage Guide
+
+### Get Page Info
+Click **GET /api/page/info** to display the page name, category, fan count, and profile picture.
+
+### List Posts
+Click **GET /api/page/posts** to view all posts with their `id`, `message`, and `created_time`.
+
+### Create a Post
+1. Click **POST /api/page/posts**
+2. Enter the post content
+3. Submit to publish the post to the Facebook Page
+
+### Delete a Post
+1. Copy the Post ID from the GET posts result (format: `pageId_postId`)
+2. Paste it into the **Post ID** field
+3. Click **DEL /api/page/post/{postId}**
+
+### View Comments / Likes
+1. Enter a Post ID
+2. Click **GET .../comments** or **GET .../likes**
+
+### Test Webhook Locally
+Send a simulated comment event using PowerShell:
+
+```powershell
+$body = @'
+{
+  "object": "page",
+  "entry": [{
+    "id": "1046712038534955",
+    "time": 1714012800,
+    "changes": [{
+      "field": "feed",
+      "value": {
+        "item": "comment",
+        "verb": "add",
+        "message": "Test comment",
+        "from": {"id": "123", "name": "Test User"},
+        "post_id": "1046712038534955_999",
+        "comment_id": "1046712038534955_888",
+        "created_time": 1714012800
+      }
+    }]
+  }]
+}
+'@
+
+Invoke-WebRequest -Uri "http://localhost:5051/webhook" -Method POST -Body $body -ContentType "application/json"
+```
+
+## Important Notes
+
+- **Access Token** expires after approximately 1-2 hours. Regenerate it from the Graph API Explorer.
+- **Page Token vs User Token**: Always select the Page name in the dropdown, not "User Token".
+- **Post ID** format is `pageId_postId` (e.g., `1046712038534955_122093172452504915`).
+- Use the `/posts` endpoint instead of `/feed` for the New Pages Experience.
+- Some legacy insight metrics have been deprecated in Graph API v25.0.
+- **Webhook signature validation** is skipped when `Facebook:AppSecret` is empty (development mode only).
+
+## Technology Stack
 
 - **Backend:** ASP.NET Core 9.0 MVC
-- **HTTP Client:** `HttpClient` (Dependency Injection)
+- **HTTP Client:** HttpClient with Dependency Injection
 - **Facebook API:** Graph API v25.0
+- **Message Broker:** Apache Kafka (Confluent.Kafka)
 - **Frontend:** HTML, CSS, JavaScript (Vanilla)
-- **Serialization:** `System.Text.Json`
+- **Serialization:** System.Text.Json
+- **Containerization:** Docker (Kafka)
 
-## 👤 Tác giả
+## Author
 
 **TRIphann** - [GitHub](https://github.com/TRIphann)
