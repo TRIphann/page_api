@@ -42,7 +42,12 @@ namespace facbook_page_api.Controllers
             [FromQuery(Name = "hub.challenge")] string? challenge)
         {
             if (mode == "subscribe" && token == _verifyToken)
+            {
+                WebhookStatusService.SetRegistered(true);
+                _logger.LogInformation("✅ Webhook verified | Mode: webhook");
                 return Ok(challenge);
+            }
+            _logger.LogWarning("⚠️ Webhook verify failed | Token mismatch");
             return Forbid();
         }
 
@@ -70,6 +75,9 @@ namespace facbook_page_api.Controllers
                 return Ok(new { status = "ignored" });
             }
 
+            // Ghi nhận event webhook
+            WebhookStatusService.RecordEvent();
+
             var events = _normalizer.Normalize(payload);
             int success = 0;
             foreach (var evt in events)
@@ -77,6 +85,7 @@ namespace facbook_page_api.Controllers
                 if (await _kafkaProducer.PublishEventAsync(evt))
                 {
                     success++;
+                    WebhookStatusService.RecordEvent(evt.EventType);
                     _logger.LogInformation(
                         "✅ Facebook → Kafka | Type: {Type} | From: {From} | Content: \"{Msg}\"",
                         evt.EventType, evt.Sender?.Name ?? "?",
@@ -174,6 +183,13 @@ namespace facbook_page_api.Controllers
         public IActionResult Health()
         {
             return Ok(new { service = "webhook", status = "healthy", kafka_topic = "raw_events" });
+        }
+
+        /// <summary>Trạng thái webhook: đang dùng polling hay webhook thật, có tunnel URL chưa</summary>
+        [HttpGet("status")]
+        public IActionResult GetStatus()
+        {
+            return Ok(WebhookStatusService.GetStatus());
         }
     }
 }

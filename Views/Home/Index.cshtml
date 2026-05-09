@@ -643,6 +643,10 @@
                 <div class="spinner" id="globalSpinner"></div>
                 <span class="response-time" id="requestTime"></span>
             </div>
+            <div id="webhookStatusBanner" style="display:flex; align-items:center; gap:8px; font-size:12px;">
+                <div class="live-dot" style="width:8px;height:8px;background:var(--text-muted);animation:none;" id="statusDot"></div>
+                <span id="statusText" style="color:var(--text-muted);">Connecting...</span>
+            </div>
         </div>
     </header>
 
@@ -764,9 +768,13 @@
         <div class="webhook-header">
             <div class="webhook-header-left">
                 <div class="live-dot"></div>
-                <span class="live-label">LIVE COMMENTS</span>
+                <span class="live-label">REALTIME COMMENTS</span>
+                <span id="webhookModeTag" style="font-size:11px;padding:3px 10px;background:rgba(245,158,11,0.12);color:var(--accent-orange);border:1px solid rgba(245,158,11,0.25);border-radius:20px;font-weight:500;">Webhook</span>
             </div>
-            <span class="event-count" id="eventCount">0 comments</span>
+            <div style="display:flex;align-items:center;gap:16px;">
+                <span class="event-count" id="webhookStats"></span>
+                <span class="event-count" id="eventCount">0 comments</span>
+            </div>
         </div>
         <div class="webhook-events" id="webhookEvents">
             <div class="empty-state" id="webhookEmpty">
@@ -1170,6 +1178,45 @@
             div.textContent = str;
             return div.innerHTML;
         }
+
+        // ========== WEBHOOK STATUS CHECK ==========
+        function checkWebhookStatus() {
+            fetch('/webhook/status')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var dot = document.getElementById('statusDot');
+                    var text = document.getElementById('statusText');
+                    var modeTag = document.getElementById('webhookModeTag');
+                    var stats = document.getElementById('webhookStats');
+                    if (!dot || !text) return;
+
+                    if (data.mode === 'webhook' && data.webhook_registered) {
+                        dot.style.background = 'var(--accent-green)';
+                        dot.style.animation = 'pulse-dot 1.5s infinite';
+                        text.style.color = 'var(--accent-green)';
+                        text.textContent = 'Webhook active | ' + data.total_events + ' events';
+                        if (modeTag) {
+                            modeTag.textContent = 'Webhook';
+                            modeTag.style.background = 'rgba(16,185,129,0.12)';
+                            modeTag.style.color = 'var(--accent-green)';
+                            modeTag.style.borderColor = 'rgba(16,185,129,0.25)';
+                        }
+                    }
+                    // Update stats
+                    if (stats && data.event_counts) {
+                        var commentCount = data.event_counts['comment'] || 0;
+                        var reactionCount = data.event_counts['reaction'] || 0;
+                        stats.textContent = commentCount + ' comments | ' + reactionCount + ' reactions';
+                    }
+                })
+                .catch(function() {
+                    var text = document.getElementById('statusText');
+                    if (text) text.textContent = 'Connecting...';
+                });
+        }
+        // Check webhook status every 5s
+        setInterval(checkWebhookStatus, 5000);
+        checkWebhookStatus();
     </script>
 </body>
 </html>

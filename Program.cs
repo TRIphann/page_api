@@ -1,5 +1,7 @@
 using facbook_page_api.Services;
 
+// Remove polling references - now using Webhook only
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -9,6 +11,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient<IFacebookGraphService, FacebookGraphService>();
 
 // ========== Webhook Services ==========
+
 // Kafka Producer - Singleton để reuse producer instance
 builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
 
@@ -18,9 +21,9 @@ builder.Services.AddTransient<IEventNormalizerService, EventNormalizerService>()
 // Signature Validator - xác thực chữ ký HMAC-SHA256
 builder.Services.AddSingleton<ISignatureValidator, SignatureValidator>();
 
-// Comment Polling - active vì ngrok free bị Facebook block
-// Webhook code vẫn đầy đủ, chỉ cần deploy lên hosting thật là chạy webhook thay polling
-builder.Services.AddHostedService<CommentPollingService>();
+// ============================================================
+// WEBHOOK ONLY - Realtime comments via Facebook Webhook
+// ============================================================
 
 // Kafka Consumer - đọc từ Kafka → push realtime tới browser qua SSE
 builder.Services.AddHostedService<KafkaConsumerService>();

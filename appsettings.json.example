@@ -1,0 +1,20 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "Facebook": {
+    "AppId": "YOUR_FACEBOOK_APP_ID",
+    "AppSecret": "YOUR_FACEBOOK_APP_SECRET",
+    "VerifyToken": "my_verify_token",
+    "PageId": "YOUR_PAGE_ID",
+    "PageAccessToken": "YOUR_PAGE_ACCESS_TOKEN"
+  },
+  "Kafka": {
+    "BootstrapServers": "localhost:9092",
+    "Topic": "raw_events"
+  }
+}
