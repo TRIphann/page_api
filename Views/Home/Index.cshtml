@@ -1216,7 +1216,32 @@
         }
         // Check webhook status every 5s
         setInterval(checkWebhookStatus, 5000);
+        // Trigger immediately on page load
         checkWebhookStatus();
+
+        // Also try SSE stream as quick connectivity indicator
+        (function quickConnectivityCheck() {
+            var testSSE = new EventSource('/webhook/stream');
+            var timeoutId = setTimeout(function() {
+                testSSE.close();
+            }, 3000);
+            testSSE.onopen = function() {
+                clearTimeout(timeoutId);
+                var dot = document.getElementById('statusDot');
+                var text = document.getElementById('statusText');
+                if (dot && text && text.textContent === 'Connecting...') {
+                    dot.style.background = 'var(--accent-cyan)';
+                    dot.style.animation = 'pulse-dot 1.5s infinite';
+                    text.style.color = 'var(--accent-cyan)';
+                    text.textContent = 'SSE connected';
+                }
+                testSSE.close();
+            };
+            testSSE.onerror = function() {
+                clearTimeout(timeoutId);
+                testSSE.close();
+            };
+        })();
     </script>
 </body>
 </html>

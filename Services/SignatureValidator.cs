@@ -40,7 +40,7 @@ namespace facbook_page_api.Services
 
             if (!signatureHeader.StartsWith("sha256="))
             {
-                _logger.LogWarning("❌ Invalid X-Hub-Signature-256 format");
+                _logger.LogWarning("❌ Invalid X-Hub-Signature-256 format: {Sig}", signatureHeader ?? "(null)");
                 return false;
             }
 
@@ -49,6 +49,9 @@ namespace facbook_page_api.Services
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_appSecret));
             var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
             var computedSignature = Convert.ToHexString(hash).ToLowerInvariant();
+
+            _logger.LogDebug("📐 SIG DEBUG | Received: {Recv} | Computed: {Comp} | AppSecret length: {Len}",
+                expectedSignature.ToLowerInvariant(), computedSignature, _appSecret.Length);
 
             var isValid = CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(computedSignature),

@@ -33,7 +33,7 @@ namespace facbook_page_api.Services
             {
                 BootstrapServers = _configuration["Kafka:BootstrapServers"] ?? "localhost:9092",
                 GroupId = "webhook-ui-consumer",
-                AutoOffsetReset = AutoOffsetReset.Latest,
+                AutoOffsetReset = AutoOffsetReset.Earliest,
                 EnableAutoCommit = true
             };
 
@@ -52,6 +52,9 @@ namespace facbook_page_api.Services
             var topic = _configuration["Kafka:Topic"] ?? "raw_events";
 
             _logger.LogInformation("Kafka Consumer STARTED | Topic: {Topic}", topic);
+
+            // Mark webhook as registered so the UI shows "Connected" immediately
+            WebhookStatusService.SetRegistered(true);
 
             await Task.Run(() =>
             {
